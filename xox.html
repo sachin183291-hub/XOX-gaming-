@@ -1,0 +1,544 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Neon Tic Tac Toe</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap');
+        
+        :root {
+            --neon-blue: #00f9ff;
+            --neon-pink: #ff00e6;
+            --neon-purple: #c724ff;
+            --dark-bg: #0f0e17;
+        }
+        
+        body {
+            font-family: 'Orbitron', sans-serif;
+            background-color: var(--dark-bg);
+            color: white;
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .neon-text {
+            text-shadow: 0 0 5px #fff,
+                         0 0 10px var(--neon-blue), 
+                         0 0 20px var(--neon-blue),
+                         0 0 30px var(--neon-purple),
+                         0 0 40px var(--neon-purple);
+            animation: text-flicker 3s infinite alternate;
+        }
+        
+        @keyframes text-flicker {
+            0%, 19%, 21%, 23%, 25%, 54%, 56%, 100% {
+                text-shadow: 0 0 5px #fff,
+                            0 0 10px var(--neon-blue), 
+                            0 0 20px var(--neon-blue),
+                            0 0 30px var(--neon-purple),
+                            0 0 40px var(--neon-purple);
+            }
+            20%, 24%, 55% {        
+                text-shadow: none;
+            }
+        }
+        
+        .cell {
+            width: 120px;
+            height: 120px;
+            cursor: pointer;
+            transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            position: relative;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            will-change: transform;
+            perspective: 1000px;
+        }
+        
+        .cell:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 15px rgba(188, 19, 254, 0.3);
+        }
+        
+        .cell.x::before, .cell.x::after {
+            content: '';
+            position: absolute;
+            width: 80%;
+            height: 4px;
+            background-color: var(--neon-blue);
+            top: 50%;
+            left: 10%;
+            transform-origin: center;
+        }
+        
+        .cell.x::before {
+            transform: translateY(-50%) rotate(45deg);
+            animation: drawX 0.5s ease-out forwards;
+        }
+        
+        .cell.o::before {
+            animation: drawO 0.5s ease-out forwards;
+        }
+        
+        @keyframes drawX {
+            0% { width: 0; }
+            100% { width: 80%; }
+        }
+        
+        @keyframes drawO {
+            0% { 
+                width: 0;
+                height: 0;
+            }
+            100% { 
+                width: 60%;
+                height: 60%;
+            }
+        }
+        
+        .cell.x::after {
+            transform: translateY(-50%) rotate(-45deg);
+        }
+        
+        .cell.o::before {
+            content: '';
+            position: absolute;
+            width: 60%;
+            height: 60%;
+            border: 4px solid var(--neon-pink);
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+        }
+        
+        .glow {
+            animation: pulse 2s infinite alternate;
+        }
+        
+        @keyframes pulse {
+            0% {
+                box-shadow: 0 0 5px var(--neon-blue);
+            }
+            100% {
+                box-shadow: 0 0 20px var(--neon-blue), 
+                            0 0 30px var(--neon-purple);
+            }
+        }
+        
+        .winner {
+            animation: winnerPulse 0.5s infinite alternate;
+            filter: brightness(1.2);
+        }
+        
+        @keyframes winnerPulse {
+            0% {
+                transform: scale(1);
+                box-shadow: 0 0 10px var(--neon-blue);
+            }
+            100% {
+                transform: scale(1.05);
+                box-shadow: 0 0 20px var(--neon-blue), 
+                            0 0 30px var(--neon-blue),
+                            0 0 40px var(--neon-purple);
+            }
+        }
+        
+        .modal {
+            backdrop-filter: blur(10px);
+            animation: fadeIn 0.5s ease-out;
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-content {
+            box-shadow: 0 0 30px rgba(199, 36, 255, 0.5),
+                        0 0 60px rgba(0, 249, 255, 0.3);
+        }
+    </style>
+</head>
+<body class="flex flex-col items-center justify-center p-4">
+    <div class="max-w-3xl w-full">
+        <h1 class="neon-text text-5xl font-bold text-center mb-2 py-4">NEON TIC TAC TOE</h1>
+            <div class="text-center mb-4">
+                <select id="theme-selector" class="px-4 py-2 bg-gray-800 rounded-full text-white">
+                    <option value="neon">Neon Theme</option>
+                    <option value="matrix">Matrix Theme</option>
+                    <option value="retro">Retro Theme</option>
+                </select>
+            </div>
+        
+        <div class="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
+            <div class="player-card bg-gray-800 p-4 rounded-lg flex items-center gap-3 transition-all duration-300" id="player1">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-blue-400 to-blue-600 flex items-center justify-center">
+                    <span class="text-xl font-bold">X</span>
+                </div>
+                <div>
+                    <h3 class="text-sm text-gray-400">PLAYER 1</h3>
+                    <p class="text-xl font-bold" id="player1-name">Human</p>
+                </div>
+                <div class="ml-auto text-2xl font-bold" id="score1">0</div>
+            </div>
+            
+            <div class="text-center space-x-2">
+                <button id="restart-btn" class="px-6 py-2 bg-purple-900 hover:bg-purple-800 rounded-full transition-all transform hover:scale-105">
+                    Restart Game
+                </button>
+                <select id="difficulty" class="px-4 py-2 bg-gray-800 rounded-full text-white">
+                    <option value="easy">Easy</option>
+                    <option value="medium" selected>Medium</option>
+                    <option value="hard">Hard</option>
+                </select>
+            </div>
+            
+            <div class="player-card bg-gray-800 p-4 rounded-lg flex items-center gap-3 transition-all duration-300" id="player2">
+                <div class="w-12 h-12 rounded-full bg-gradient-to-br from-pink-400 to-pink-600 flex items-center justify-center">
+                    <span class="text-xl font-bold">O</span>
+                </div>
+                <div>
+                    <h3 class="text-sm text-gray-400">PLAYER 2</h3>
+                    <p class="text-xl font-bold" id="player2-name">Computer</p>
+                </div>
+                <div class="ml-auto text-2xl font-bold" id="score2">0</div>
+            </div>
+        </div>
+        
+        <div class="grid grid-cols-3 gap-4 mb-6 w-full max-w-md mx-auto">
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="0"></div>
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="1"></div>
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="2"></div>
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="3"></div>
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="4"></div>
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="5"></div>
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="6"></div>
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="7"></div>
+            <div class="cell bg-gray-900 rounded-lg flex items-center justify-center" data-index="8"></div>
+        </div>
+        
+        <div class="flex justify-between items-center max-w-md mx-auto mb-6">
+            <div class="bg-gray-800 p-3 rounded-lg text-center w-1/2 mr-2">
+                <p class="text-sm text-gray-400">TURN</p>
+                <p class="text-xl font-bold" id="current-turn">X's Turn</p>
+            </div>
+            <div class="bg-gray-800 p-3 rounded-lg text-center w-1/2 ml-2">
+                <p class="text-sm text-gray-400">GAME</p>
+                <p class="text-xl font-bold">#<span id="game-count">1</span></p>
+            </div>
+        </div>
+        <div id="game-history" class="bg-gray-800 p-3 rounded-lg mt-4 max-w-md mx-auto h-32 overflow-auto hidden">
+            <p class="text-sm text-gray-400 mb-2">GAME HISTORY</p>
+            <div id="history-log"></div>
+        </div>
+    </div>
+    
+    <div id="game-modal" class="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 hidden modal">
+        <div class="bg-gray-900 p-8 rounded-lg max-w-md w-full mx-4 border border-purple-500">
+            <h2 class="text-3xl font-bold mb-4 neon-text" id="modal-title">Game Over</h2>
+            <p class="text-xl mb-6" id="modal-message">Player X wins!</p>
+            <div class="flex justify-center gap-4">
+                <button id="new-game-btn" class="px-6 py-2 bg-blue-600 hover:bg-blue-500 rounded-full transition-all">
+                    New Game
+                </button>
+                <button id="close-modal-btn" class="px-6 py-2 bg-gray-700 hover:bg-gray-600 rounded-full transition-all">
+                    Close
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <audio id="click-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-arcade-game-jump-coin-216.mp3" preload="auto"></audio>
+    <audio id="win-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-winning-chimes-2015.mp3" preload="auto"></audio>
+    <audio id="draw-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-retro-arcade-casino-notification-267.mp3" preload="auto"></audio>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Game state
+            const board = ['', '', '', '', '', '', '', '', ''];
+            let currentPlayer = 'X';
+            let gameActive = true;
+            let scores = { X: 0, O: 0 };
+            let gameCount = 1;
+            let vsComputer = true;
+            
+            // DOM elements
+            const cells = document.querySelectorAll('.cell');
+            const currentTurnDisplay = document.getElementById('current-turn');
+            const score1Display = document.getElementById('score1');
+            const score2Display = document.getElementById('score2');
+            const gameCountDisplay = document.getElementById('game-count');
+            const restartBtn = document.getElementById('restart-btn');
+            const modal = document.getElementById('game-modal');
+            const modalTitle = document.getElementById('modal-title');
+            const modalMessage = document.getElementById('modal-message');
+            const newGameBtn = document.getElementById('new-game-btn');
+            const closeModalBtn = document.getElementById('close-modal-btn');
+            const player1Card = document.getElementById('player1');
+            const player2Card = document.getElementById('player2');
+            
+            // Audio elements
+            const clickSound = document.getElementById('click-sound');
+            const winSound = document.getElementById('win-sound');
+            const drawSound = document.getElementById('draw-sound');
+            
+            // Winning combinations
+            const winningCombinations = [
+                [0, 1, 2], [3, 4, 5], [6, 7, 8], // rows
+                [0, 3, 6], [1, 4, 7], [2, 5, 8], // columns
+                [0, 4, 8], [2, 4, 6]             // diagonals
+            ];
+            
+            // Initialize game
+            function initGame() {
+                board.fill('');
+                currentPlayer = 'X';
+                gameActive = true;
+                
+                cells.forEach(cell => {
+                    cell.classList.remove('x', 'o', 'winner');
+                    cell.textContent = '';
+                });
+                
+                updateTurnDisplay();
+                highlightCurrentPlayer();
+            }
+            
+            // Update whose turn it is
+            function updateTurnDisplay() {
+                currentTurnDisplay.textContent = `${currentPlayer}'s Turn`;
+            }
+            
+            // Highlight current player's card
+            function highlightCurrentPlayer() {
+                if (currentPlayer === 'X') {
+                    player1Card.classList.add('glow');
+                    player2Card.classList.remove('glow');
+                } else {
+                    player1Card.classList.remove('glow');
+                    player2Card.classList.add('glow');
+                }
+            }
+            
+            // Handle cell click
+            function handleCellClick(e) {
+                if (!gameActive) return;
+                
+                const cell = e.target;
+                const index = parseInt(cell.getAttribute('data-index'));
+                
+                if (board[index] !== '') return;
+                
+                // Make move
+                board[index] = currentPlayer;
+                playSound(clickSound);
+                renderBoard();
+                
+                // Check for win or draw
+                if (checkWin()) {
+                    gameActive = false;
+                    scores[currentPlayer]++;
+                    updateScores();
+                    highlightWinningCells();
+                    playSound(winSound);
+                    showModal(`${currentPlayer} wins!`, `Player ${currentPlayer} has won the game!`);
+                    return;
+                }
+                
+                if (checkDraw()) {
+                    gameActive = false;
+                    playSound(drawSound);
+                    showModal("Draw!", "The game ended in a draw!");
+                    return;
+                }
+                
+                // Switch player
+                currentPlayer = currentPlayer === 'X' ? 'O' : 'O';
+                updateTurnDisplay();
+                highlightCurrentPlayer();
+                
+                // Computer move if playing against AI
+                if (vsComputer && currentPlayer === 'O' && gameActive) {
+                    setTimeout(makeComputerMove, 600);
+                }
+            }
+            
+            // Make a computer move (simple AI)
+            function makeComputerMove() {
+                if (!gameActive) return;
+                
+                const difficulty = document.getElementById('difficulty').value;
+                
+                // Try to win first
+                for (let combo of winningCombinations) {
+                    const [a, b, c] = combo;
+                    if (board[a] === 'O' && board[b] === 'O' && board[c] === '') {
+                        makeMove(c);
+                        return;
+                    }
+                    if (board[a] === 'O' && board[c] === 'O' && board[b] === '') {
+                        makeMove(b);
+                        return;
+                    }
+                    if (board[b] === 'O' && board[c] === 'O' && board[a] === '') {
+                        makeMove(a);
+                        return;
+                    }
+                }
+                
+                // Block player from winning
+                for (let combo of winningCombinations) {
+                    const [a, b, c] = combo;
+                    if (board[a] === 'X' && board[b] === 'X' && board[c] === '') {
+                        makeMove(c);
+                        return;
+                    }
+                    if (board[a] === 'X' && board[c] === 'X' && board[b] === '') {
+                        makeMove(b);
+                        return;
+                    }
+                    if (board[b] === 'X' && board[c] === 'X' && board[a] === '') {
+                        makeMove(a);
+                        return;
+                    }
+                }
+                
+                // Take center if available
+                if (board[4] === '') {
+                    makeMove(4);
+                    return;
+                }
+                
+                // Take a random available corner
+                const corners = [0, 2, 6, 8].filter(index => board[index] === '');
+                if (corners.length > 0) {
+                    const randomCorner = corners[Math.floor(Math.random() * corners.length)];
+                    makeMove(randomCorner);
+                    return;
+                }
+                
+                // Take any available cell
+                const availableCells = [];
+                for (let i = 0; i < board.length; i++) {
+                    if (board[i] === '') availableCells.push(i);
+                }
+                
+                if (availableCells.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * availableCells.length);
+                    makeMove(availableCells[randomIndex]);
+                }
+            }
+            
+            // Helper function for computer move
+            function makeMove(index) {
+                board[index] = currentPlayer;
+                playSound(clickSound);
+                renderBoard();
+                
+                if (checkWin()) {
+                    gameActive = false;
+                    scores[currentPlayer]++;
+                    updateScores();
+                    highlightWinningCells();
+                    playSound(winSound);
+                    showModal(`${currentPlayer} wins!`, `Player ${currentPlayer} has won the game!`);
+                    return;
+                }
+                
+                if (checkDraw()) {
+                    gameActive = false;
+                    playSound(drawSound);
+                    showModal("Draw!", "The game ended in a draw!");
+                    return;
+                }
+                
+                currentPlayer = 'X';
+                updateTurnDisplay();
+                highlightCurrentPlayer();
+            }
+            
+            // Render the board
+            function renderBoard() {
+                cells.forEach((cell, index) => {
+                    if (board[index] !== '') {
+                        cell.classList.add(board[index].toLowerCase());
+                    }
+                });
+            }
+            
+            // Check for a win
+            function checkWin() {
+                return winningCombinations.some(combination => {
+                    const [a, b, c] = combination;
+                    return board[a] !== '' && board[a] === board[b] && board[a] === board[c];
+                });
+            }
+            
+            // Check for a draw
+            function checkDraw() {
+                return board.every(cell => cell !== '');
+            }
+            
+            // Highlight the winning cells
+            function highlightWinningCells() {
+                const winningCombo = winningCombinations.find(combination => {
+                    const [a, b, c] = combination;
+                    return board[a] !== '' && board[a] === board[b] && board[a] === board[c];
+                });
+                
+                if (winningCombo) {
+                    winningCombo.forEach(index => {
+                        cells[index].classList.add('winner');
+                    });
+                }
+            }
+            
+            // Update scores
+            function updateScores() {
+                score1Display.textContent = scores['X'];
+                score2Display.textContent = scores['O'];
+            }
+            
+            // Show modal
+            function showModal(title, message) {
+                modalTitle.textContent = title;
+                modalMessage.textContent = message;
+                modal.classList.remove('hidden');
+            }
+            
+            // Play sound
+            function playSound(audio) {
+                audio.currentTime = 0;
+                audio.play();
+            }
+            
+            // Event listeners
+            cells.forEach(cell => {
+                cell.addEventListener('click', handleCellClick);
+            });
+            
+            restartBtn.addEventListener('click', () => {
+                gameCount++;
+                gameCountDisplay.textContent = gameCount;
+                initGame();
+            });
+            
+            newGameBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                gameCount++;
+                gameCountDisplay.textContent = gameCount;
+                initGame();
+            });
+            
+            closeModalBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+            
+            // Initialize the game
+            initGame();
+        });
+    </script>
+</body>
+</html>
